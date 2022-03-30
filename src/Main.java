@@ -10,37 +10,64 @@ import java.util.Locale;
  */
 public class Main {
 	public static void main(String[] args) {
-		System.out.println("This will take a while to finish.\nSeveral tests will run and print their results as csv:");
-		System.out.println("Starting the polyline run time test ...");
+		rd_eval_test();
 		// runtime_test_polyline();
-		System.out.println("Starting the polyline quality test ...");
 		// quality_test_polyline();
-		System.out.println("Starting the graph quality test ...");
-		quality_test_graph();
-		System.out.println(
-				"Starting the large graph quality test. -- Abort if this is taking too long for you. You can expect at least several hours of waiting.");
-		//graph_test();
+		// quality_test_graph();
+		// graph_test();
+		// test_heap();
+	}
+
+	private static void test_heap() {
+		Node n_0 = new Node(0);
+		Node n_1 = new Node(1);
+		Node n_2 = new Node(2);
+		Node n_3 = new Node(3);
+		Node n_4 = new Node(4);
+		Node n_5 = new Node(5);
+
+		MHPriorityQueue Q = new MHPriorityQueue(6);
+
+		Q.insert(n_0, 4.2);
+		Q.insert(n_1, 2.2);
+		Q.insert(n_2, 3.5);
+		Q.insert(n_3, 4.9);
+		Q.insert(n_4, 1.2);
+		Q.insert(n_5, Double.MAX_VALUE);
+
+		Q.print();
+
+		Q.decrease_key(n_0, 0.0);
+
+		Q.print();
+
+		Q.extract_min();
+
+		Q.print();
+
+		return;
 	}
 
 	/**
 	 * Function testing solution quality on graphs
 	 */
 	private static void quality_test_graph() {
-		File f = new File("src/map.osm");
+		System.out.println("Starting the graph quality test ...");
+		File f = new File("src/Benchmark_Graphs/map.osm");
 		Graph G = Graph_Util.read_osm_graph(f);
 		System.out.println("|V| = " + G.num_nodes() + ", |E| = " + G.num_edges());
 
 		System.out.println("Reducing graph ...");
-		
+
 		G = Graph_Util.largest_connected_component(G);
 		G.reduce_graph();
-		
+
 		// System.out.println(G.toString());
 		System.out.println("|V| = " + G.num_nodes() + ", |E| = " + G.num_edges());
 		System.out.println(Graph_Util.connected_components(G));
-		
-		String csv = "k; random gap; greedy gap; sequential addition gap; MGM gap; 1-OPT fast gap; 1-OPT thorough gap\n";
-		String csv_dist = "k; random; greedy; sequential addition; MGM dist; 1-OPT fast; 1-OPT thorough\n";
+
+		String csv = "k; random gap; greedy gap; sequential addition gap; MGM gap; 1-OPT gap\n";
+		String csv_dist = "k; random; greedy; sequential addition; MGM dist; 1-OPT\n";
 		int stepsize = G.num_edges() / 15;
 		boolean[] dist_sel = new boolean[G.num_edges()];
 		boolean[] gap_sel = new boolean[G.num_edges()];
@@ -56,95 +83,127 @@ public class Main {
 			int rounding_runs = 25;
 			for (int j = 0; j < rounding_runs; j++) {
 				rd_sel = Utility.random_selection(G.num_edges(), i);
-				quality += Utility.max(Graph_Util.dijkstra_default(rd_sel, G)) / rounding_runs;
-				quality_gap += Graph_Util.evaluate_selection(rd_sel, G).second / rounding_runs;
+				quality += Utility.max(Graph_Eval.dijkstra_default(rd_sel, G)) / rounding_runs;
+				quality_gap += Graph_Eval.evaluate_selection(rd_sel, G).second / rounding_runs;
 			}
 			csv_dist += String.format("%1$,.7f", quality) + "; ";
 			csv += String.format("%1$,.7f", quality_gap) + "; ";
 
 			greedy_sel = GraphSolver.greedy_heuristic(G, i);
-			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Util.dijkstra_default(greedy_sel, G))) + "; ";
-			csv += String.format("%1$,.7f", Graph_Util.evaluate_selection(greedy_sel, G).second) + "; ";
+			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Eval.dijkstra_default(greedy_sel, G))) + "; ";
+			csv += String.format("%1$,.7f", Graph_Eval.evaluate_selection(greedy_sel, G).second) + "; ";
 
 			dist_sel = GraphSolver.k_seq_add_dist(dist_sel, G, stepsize);
-			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Util.dijkstra_default(dist_sel, G))) + "; ";
-			csv += String.format("%1$,.7f", Graph_Util.evaluate_selection(dist_sel, G).second) + "; ";
+			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Eval.dijkstra_default(dist_sel, G))) + "; ";
+			csv += String.format("%1$,.7f", Graph_Eval.evaluate_selection(dist_sel, G).second) + "; ";
 
 			gap_sel = GraphSolver.k_seq_add_gap(gap_sel, G, stepsize);
-			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Util.dijkstra_default(gap_sel, G))) + "; ";
-			csv += String.format("%1$,.7f", Graph_Util.evaluate_selection(gap_sel, G).second) + "; ";
+			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Eval.dijkstra_default(gap_sel, G))) + "; ";
+			csv += String.format("%1$,.7f", Graph_Eval.evaluate_selection(gap_sel, G).second) + "; ";
 
-			
-			long time = System.currentTimeMillis();
-			one_opt_sel = GraphSolver.one_opt(G, greedy_sel.clone());
-			long duration = System.currentTimeMillis() - time;
-			
-			
-			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Util.dijkstra_default(one_opt_sel, G))) + "; ";
-			csv += String.format("%1$,.7f", Graph_Util.evaluate_selection(one_opt_sel, G).second) + "; ";
-			
-			time = System.currentTimeMillis();
 			one_opt_sel = GraphSolver.one_opt_naive(G, greedy_sel.clone());
-			long duration_naive = System.currentTimeMillis() - time;
-			System.out.println("smart 1-OPT / naive 1-OPT " + duration / (float) duration_naive);
-			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Util.dijkstra_default(one_opt_sel, G))) + "\n";
-			csv += String.format("%1$,.7f", Graph_Util.evaluate_selection(one_opt_sel, G).second) + "\n";
+			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Eval.dijkstra_default(one_opt_sel, G))) + "\n";
+			csv += String.format("%1$,.7f", Graph_Eval.evaluate_selection(one_opt_sel, G).second) + "\n";
+
 		}
 		System.out.println(csv);
-		//System.out.println(csv_dist);
+		// System.out.println(csv_dist);
+	}
+
+	public static void rd_eval_test() {
+		File f = new File("src/Benchmark_Graphs/Rome.txt");
+		Graph G = Graph_Util.read_dimacs_graph(f);
+		System.out.println("|V| = " + G.num_nodes() + ", |E| = " + G.num_edges());
+
+		System.out.println("Reducing graph ...");
+		String csv = "";
+		G = Graph_Util.largest_connected_component(G);
+		G.reduce_graph();
+		for (int k = 250; k < G.num_edges(); k += 250) {
+			// System.out.println(G.toString());
+			System.out.println("|V| = " + G.num_nodes() + ", |E| = " + G.num_edges());
+			boolean[] S = Utility.random_selection(G.num_edges(), k);
+			double[] distance = Graph_Eval.dijkstra_default(S, G);
+			double max_dist = Utility.max(distance);
+			System.out.println("Max Dist: " + max_dist);
+			double max_composite_gap = Graph_Eval.evaluate_selection(S, G, distance).second;
+			System.out.println("Max Composite Gap: " + max_composite_gap);
+			double farthest_midpoint_dist = Graph_Eval.evaluate_selection_farthest_midpoint(S, G, distance).second;
+			System.out.println("Farthest_Midpoint: " + farthest_midpoint_dist);
+
+			long start = System.nanoTime();
+			double LSP = Graph_Eval.evaluate_LSP(G, S);
+			long duration = System.nanoTime() - start;
+
+			System.out.println("LSP: " + LSP + " in " + duration + " ns");
+
+			start = System.nanoTime();
+			double LSP_optimised = Graph_Eval.evaluate_LSP_memory_optimised(G, S);
+			duration = System.nanoTime() - start;
+			System.out.println("LSP optimised: " + LSP_optimised + " in " + duration + " ns");
+			csv += "\n";
+
+		}
+
 	}
 
 	/**
 	 * Dont try this at home -- takes at least 30 min
 	 */
 	public static void graph_test() {
+		System.out.println(
+				"Starting the large graph quality test. -- Abort if this is taking too long for you. You can expect about an hour of waiting.");
 
-		File f = new File("src/100k_j_d.txt");
-		Graph G_2 = Graph_Util.read_graph(f);
-		G_2 = Graph_Util.largest_connected_component(G_2);
-		System.out.println(G_2.num_nodes());
-		G_2.reduce_graph();
-		double[] result = new double[G_2.num_nodes()];
-		boolean[] sel = new boolean[G_2.num_edges()];
+		File f = new File("src/Benchmark_Graphs/100k_j_d.txt");
+		Graph G = Graph_Util.read_graph(f);
+
+		G = Graph_Util.largest_connected_component(G);
+		System.out.println(G.num_nodes());
+		G.reduce_graph();
+
+		double[] result = new double[G.num_nodes()];
+		boolean[] sel = new boolean[G.num_edges()];
 		// boolean[] visited = Graph_Util.visit_breadth_first(G_2,
 		// G.get_nodes().get(4));
 
 		int k = 10000;
 
-		sel = Utility.random_selection(G_2.num_edges(), k);
-		result = Graph_Util.dijkstra_gap_eval(sel, G_2);
-		Graph_Util.write_graph(G_2, "random_pajek.txt", sel);
-		System.out.println("Maximum distance (random select): " + Graph_Util.evaluate_selection(sel, G_2).second);
+		sel = Utility.random_selection(G.num_edges(), k);
+		result = Graph_Eval.dijkstra_gap_eval(sel, G);
+		Graph_Util.write_graph(G, "random_pajek.txt", sel);
+		System.out.println("Maximum distance (random select): " + Graph_Eval.evaluate_selection(sel, G).second);
 
-		sel = GraphSolver.greedy_heuristic(G_2, k);
-		result = Graph_Util.dijkstra_gap_eval(sel, G_2);
+		sel = GraphSolver.greedy_heuristic(G, k);
+		result = Graph_Eval.dijkstra_gap_eval(sel, G);
 
-		Graph_Util.write_graph(G_2, "greedy_pajek.txt", sel);
-		System.out.println("Maximum distance (greedy select): " + Graph_Util.evaluate_selection(sel, G_2).second);
+		Graph_Util.write_graph(G, "greedy_pajek.txt", sel);
+		System.out.println("Maximum distance (greedy select): " + Graph_Eval.evaluate_selection(sel, G).second);
 
-		sel = GraphSolver.sequential_addition_dist(G_2, k, true);
-		result = Graph_Util.dijkstra_gap_eval(sel, G_2);
-		Graph_Util.write_graph(G_2, "SA_dist_pajek.txt", sel);
+		sel = GraphSolver.sequential_addition_dist(G, k, true);
+		result = Graph_Eval.dijkstra_gap_eval(sel, G);
+		Graph_Util.write_graph(G, "SA_dist_pajek.txt", sel);
 		System.out.println(
-				"Maximum distance (sequential addition dist): " + Graph_Util.evaluate_selection(sel, G_2).second);
+				"Maximum distance (sequential addition dist): " + Graph_Eval.evaluate_selection(sel, G).second);
 
-		sel = GraphSolver.sequential_addition_gap(G_2, k, true);
-		result = Graph_Util.dijkstra_gap_eval(sel, G_2);
-		Graph_Util.write_graph(G_2, "SA_gap_pajek.txt", sel);
-		System.out.println(
-				"Maximum distance (sequential addition gap): " + Graph_Util.evaluate_selection(sel, G_2).second);
+		sel = GraphSolver.sequential_addition_gap(G, k, true);
+		result = Graph_Eval.dijkstra_gap_eval(sel, G);
+		Graph_Util.write_graph(G, "SA_gap_pajek.txt", sel);
+		System.out
+				.println("Maximum distance (sequential addition gap): " + Graph_Eval.evaluate_selection(sel, G).second);
 
-		sel = GraphSolver.one_opt(G_2, sel);
-		result = Graph_Util.dijkstra_gap_eval(sel, G_2);
-		Graph_Util.write_graph(G_2, "1-OPT_SA_pajek.txt", sel);
+		sel = GraphSolver.one_opt_naive(G, sel);
+		result = Graph_Eval.dijkstra_gap_eval(sel, G);
+		Graph_Util.write_graph(G, "1-OPT_SA_pajek.txt", sel);
 		System.out.println("Maximum distance (1-OPT from sequential addition gap): "
-				+ Graph_Util.evaluate_selection(sel, G_2).second);
+				+ Graph_Eval.evaluate_selection(sel, G).second);
 	}
 
 	/**
 	 * Comparing polyline run time
 	 */
 	private static void runtime_test_polyline() {
+		System.out.println("Starting the polyline run time test ...");
+
 		double range = 10.0;
 		String csv = "n; uniform; greedy; parametric search; parametric binary search, graph heuristic\n";
 		for (int i = 0; i < 20; i++) {
@@ -203,6 +262,7 @@ public class Main {
 	 * Function comparing polyline quality
 	 */
 	private static void quality_test_polyline() {
+		System.out.println("Starting the polyline quality test ...");
 		int size = 10000;
 		double range = 10.0;
 		System.out.println("Creating random array of double values -- size: " + size + ", value range: " + range);
