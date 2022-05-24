@@ -28,8 +28,7 @@ public class Main {
 		System.out.println(T.toString());
 		boolean[] S = new boolean[T.edges.size()];
 		double[] d = new double[T.nodes.size()];
-		TreeSolver.select_tree_DFS(T, S, d, 2.0, 0);
-		System.out.println(Arrays.toString(d));
+		S = TreeSolver.parametric_search(T, 8);
 		System.out.println(Utility.num_selected(S));
 		for (int i = 0; i < S.length; i++) {
 			if (S[i]) {
@@ -38,7 +37,7 @@ public class Main {
 		}
 		System.out.println("LSP-length: " + TreeSolver.eval_LSP(T, S));
 		boolean[] S_greedy = new boolean[T.edges.size()];
-		TreeSolver.select_greedy(T, S_greedy, 6);
+		TreeSolver.select_greedy(T, S_greedy, 8);
 		System.out.println();
 		System.out.println(Utility.num_selected(S_greedy));
 		for (int i = 0; i < S_greedy.length; i++) {

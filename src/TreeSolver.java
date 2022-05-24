@@ -1,3 +1,6 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+
 public abstract class TreeSolver {
 	/**
 	 * Computes an l-satisfying selection for a tree of minimal size
@@ -59,12 +62,55 @@ public abstract class TreeSolver {
 		}
 	}
 	
-	public static void parametric_search(Tree T, int k) {
+	public static boolean[] parametric_search(Tree T, int k) {
 		double[] possible_distances = new double[T.nodes.size() * T.nodes.size()];
+		possible_gap_lengths(T, possible_distances);
+		Arrays.sort(possible_distances);
+		ArrayList<Double> dists = new ArrayList<>(possible_distances.length);
+		for (double d : possible_distances) {
+			dists.add(d);
+		}
+		Utility.removeDuplicates(dists);
+		int root = 0;
+		int left = 0;
+		int right = dists.size() - 1;
+		boolean[] S_opt = new boolean[T.nodes.size()];
+		while(left < right) {
+			int middle = (left + right) / 2;
+			boolean[] S = new boolean[T.edges.size()];
+			select_tree_DFS(T, S, new double[T.nodes.size()], dists.get(middle), root);
+			if (Utility.num_selected(S) <= k) {
+				S_opt = Arrays.copyOf(S, S.length);
+				right = middle - 1;
+			} else {
+				left = middle + 1;
+			}
+		}
+		return S_opt;
+		
 	}
 	
-	public static void possible_gap_lengths(Tree T, double possible_distances) {
-		
+	public static void possible_gap_lengths(Tree T, double[] possible_distances) {
+		for (Node n : T.nodes) {
+			boolean[] visited = new boolean[T.nodes.size()];
+			distancesDFS(T, possible_distances, n.key, visited, n.key, 0);
+		}
+	}
+	
+	public static void distancesDFS(Tree T, double[] distances, int root_index, boolean[] visited, int source, double d) {
+		visited[root_index] = true;
+		distances[T.nodes.size() * source + root_index] = d;
+		distances[T.nodes.size() * root_index + source] = d;
+		if (T.get(root_index).degree() == 1) {
+			return;
+		}
+		for (Edge e : T.get(root_index).incident_edges.values()) {
+			int c_key =	(e.first == root_index) ? e.second : e.first;
+			if (visited[c_key]) {
+				continue;
+			}
+			distancesDFS(T, distances, c_key, visited, source, d + e.length);
+		}
 	}
 
 	public static void select_greedy(Tree T, boolean[] S, int k) {
@@ -80,26 +126,29 @@ public abstract class TreeSolver {
 		double lsp = 0.0;
 
 		for (Node n : T.nodes) {
-			double d_max = max_DFS(n.key, T, S);
+			boolean[] visited = new boolean[T.nodes.size()];
+			double d_max = max_DFS(n.key, T, S, visited);
 			lsp = Math.max(d_max, lsp);
 		}
 		
 		return lsp;
 	}
 	
-	public static double max_DFS(int root_index, Tree T, boolean[] S) {
+	public static double max_DFS(int root_index, Tree T, boolean[] S, boolean[] visited) {
+		visited[root_index] = true;
 		Node root = T.get(root_index);
 		if (root.degree() == 1) {
 			return 0.0;
 		}
 		double d_max = 0.0;
 		for (Edge e : root.incident_edges.values()) {
-			if (root.key != Math.min(e.first, e.second) || S[e.index]) {
+			int c_key =	(e.first == root_index) ? e.second : e.first;
+			if (visited[c_key] || S[e.index]) {
 				continue;
 			} 
 			
-			Node c = T.get(Math.max(e.second, e.first));
-			double d = max_DFS(c.key, T, S) + e.length;
+			Node c = T.get(c_key);
+			double d = max_DFS(c.key, T, S, visited) + e.length;
 			d_max = Math.max(d_max, d);
 		}
 		
