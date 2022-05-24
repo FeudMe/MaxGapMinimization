@@ -690,9 +690,10 @@ public abstract class Graph_Eval {
 		return distance;
 	}
 
-	public static Tupel<Edge, Double> evaluate_selection_farthest_midpoint(boolean[] sel, Graph G, double[] dist) {
+	public static Tupel<Edge, Double> evaluate_selection_farthest_midpoint(boolean[] sel, Graph G) {
 		double max_gap = 0.0;
 		Edge max_edge = null;
+		double[] dist = dijkstra_gap_eval(sel, G);
 		for (Edge e : G.get_edges()) {
 			if (!sel[e.index]) {
 				double d_e = Math.min(dist[e.first], dist[e.second]) + 0.5 * e.length;

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.Scanner;
 
@@ -204,38 +205,71 @@ public abstract class Graph_Util {
 	 */
 	public static ArrayList<Tupel<Node, Integer>> connected_components(Graph G) {
 		ArrayList<Tupel<Node, Integer>> sizes = new ArrayList<>();
-		boolean[] checked = new boolean[G.num_nodes()];
-
-		int i = 0;
-		while (i < checked.length) {
-			if (checked[i]) {
-				break;
+		int[] checked = new int[G.num_nodes()];
+		for (int i = 0; i < checked.length; i++) {
+			checked[i] = -1;
+		}
+		for (int i = 0; i < checked.length; i++) {
+			if (checked[i] != -1) {
+				continue;
 			}
-			boolean[] visited = new boolean[G.num_nodes()];
-
-			iterative_BFS(G, G.get_nodes().get(i), visited);
-			for (int x = 0; x < visited.length; x++) {
-				if (visited[x]) {
-					checked[x] = true;
-				}
-			}
-			int c = Utility.num_selected(visited);
-
+			int c = iterative_BFS(G, G.get_nodes().get(i), checked);
+				
 			sizes.add(new Tupel<Node, Integer>(G.get_nodes().get(i), c));
-
-			int j = i;
-			while (j < visited.length) {
-				if (!checked[i]) {
-					break;
-				}
-				j++;
-				i++;
-			}
-
 		}
 		return sizes;
 	}
 
+	public static Graph subgraph_dimacs() {
+		return null;
+	}
+	
+	public static Graph subgraph_100_k(double percentage) {
+		File f = new File("src/Benchmark_Graphs/100k_j_d.txt");
+		Graph G = Graph_Util.read_graph(f);
+
+		double x_min = Double.MAX_VALUE;
+		double x_max = -Double.MAX_VALUE;
+		double y_min = Double.MAX_VALUE;
+		double y_max = -Double.MAX_VALUE;
+		
+		
+		for (Node n : G.get_nodes().values()) {
+			TwoDNode n_2d = (TwoDNode) n;
+			x_max = Math.max(x_max, n_2d.x);
+			x_min = Math.min(x_min, n_2d.x);
+			y_max = Math.max(y_max, n_2d.y);
+			y_min = Math.min(y_min, n_2d.y);
+		}
+		// System.out.println(x_min + " " + x_max + " " + y_min + " " + y_max);
+		double side_length_factor = Math.sqrt(percentage);
+		double new_x_length = side_length_factor * (x_max - x_min);
+		double new_y_length = side_length_factor * (y_max - y_min);
+		
+		double new_max_x_cutoff = x_min + new_x_length;
+		double new_max_y_cutoff = y_min + new_y_length;
+		// System.out.println(new_max_x_cutoff + " " + new_max_y_cutoff);
+		
+		Graph G_2 = new Graph();
+		Iterator<Node> it = G.get_nodes().values().iterator();
+		
+		while (it.hasNext()) {
+			TwoDNode n_2d = (TwoDNode) it.next();
+			if (n_2d.x <= new_max_x_cutoff || n_2d.y <= new_max_y_cutoff) {
+				G_2.add_node(new TwoDNode(n_2d.key, n_2d.x, n_2d.y));
+			}
+		}
+		for (Edge e : G.get_edges()) {
+			if (G_2.get_nodes().containsKey(e.first) && G_2.get_nodes().containsKey(e.second)) {
+				G_2.add_edge(e);
+			}
+		}
+		G_2.reduce_graph();
+		G_2 = largest_connected_component(G_2);
+		G_2.reduce_graph();
+		return G_2;
+	}
+	
 	/**
 	 * Implementation of breadth-first search found on Geeksforgeeks.com
 	 * 
@@ -254,13 +288,16 @@ public abstract class Graph_Util {
 		}
 	}
 
-	public static void iterative_BFS(Graph G, Node v, boolean[] visited) {
+	public static int iterative_BFS(Graph G, Node v, boolean[] visited) {
 		Queue<Node> Q = new ArrayDeque<Node>();
 		visited[v.key] = true;
 		Q.add(v);
-
+		
+		int c = 0; 
+		
 		while (!Q.isEmpty()) {
 			v = Q.poll();
+			c++;
 			for (Edge e : v.incident_edges.values()) {
 				Node w;
 				if (e.first == v.key) {
@@ -275,8 +312,66 @@ public abstract class Graph_Util {
 				}
 			}
 		}
+		return c;
 	}
 
+	public static int iterative_BFS(Graph G, Node v, int[] checked) {
+		Queue<Node> Q = new ArrayDeque<Node>();
+		checked[v.key] = v.key;
+		Q.add(v);
+		
+		int c = 0; 
+		
+		while (!Q.isEmpty()) {
+			Node next = Q.poll();
+			c++;
+			for (Edge e : next.incident_edges.values()) {
+				Node w;
+				if (e.first == next.key) {
+					w = G.get_nodes().get(e.second);
+				} else {
+					w = G.get_nodes().get(e.first);
+				}
+				if (checked[w.key] == -1) {
+					// mark it as discovered and enqueue it
+					checked[w.key] = v.key;
+					Q.add(w);
+				}
+			}
+		}
+		return c;
+	}
+	
+	public static int iterative_BFS(Graph G, Node v, boolean[] visited, boolean[] checked) {
+		Queue<Node> Q = new ArrayDeque<Node>();
+		visited[v.key] = true;
+		checked[v.key] = true;
+		Q.add(v);
+		
+		int c = 0; 
+		
+		while (!Q.isEmpty()) {
+			v = Q.poll();
+			c++;
+			for (Edge e : v.incident_edges.values()) {
+				Node w;
+				if (e.first == v.key) {
+					w = G.get_nodes().get(e.second);
+				} else {
+					w = G.get_nodes().get(e.first);
+				}
+				if (!visited[w.key]) {
+					// mark it as discovered and enqueue it
+					visited[w.key] = true;
+					checked[w.key] = true;
+					Q.add(w);
+				}
+			}
+		}
+		return c;
+	}
+
+	
 	/**
 	 * Write out a graph in pajek format with only selected edges
 	 * 
@@ -437,6 +532,36 @@ public abstract class Graph_Util {
 			e.printStackTrace();
 		}
 		return G;
+	}
+	
+	public static Tree read_tree(File f) {
+		Tree T = new Tree();
+		try {
+			Scanner sc = new Scanner(f);
+			while (sc.hasNextLine()) {
+				String[] split = sc.nextLine().split(" ");
+				int id_1 = Integer.parseInt(split[0]);
+				int id_2 = Integer.parseInt(split[1]);
+				double l = Double.parseDouble(split[2]);
+				Node n_1 = new Node(id_1);
+				Node n_2 = new Node(id_2);
+				if (T.nodes.size() == 0) {
+					T.add_root(n_1);
+					T.add_child(n_2, n_1.key, l);
+				} else {
+					if (id_1 < id_2) {
+						T.add_child(n_2, n_1.key, l);
+					} else {
+						T.add_child(n_1, n_2.key, l);
+					}
+				}
+			}
+			sc.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		return T;
 	}
 
 }
