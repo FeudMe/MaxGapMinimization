@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 
 public abstract class TreeSolver {
 	/**
@@ -13,81 +14,102 @@ public abstract class TreeSolver {
 	 * @return the longest unblocked distance from the subtree's root to a recursive
 	 *         child
 	 */
-	public static double select_tree_DFS(Tree T, boolean[] S, double[] d, double l, int root_index) {
+	public static double select_tree_DFS(Tree T, boolean[] S, double[] d, double l, int root_index, int abs_root, boolean[] visited) {
 		Node root = T.get(root_index);
-		if (root.degree() == 1) {
-			return 0.0;
+		if (root.degree() == 1 && root_index != abs_root) {
+			// System.out.println(root_index + " returned early");
+			return 0.0d;
 		}
-		int e_min = -1;
-		int e_max = -1;
-		double d_min = Double.MAX_VALUE;
-		double d_max = 0.0;
+		visited[root.key] = true;
+		
+		int e_above = -1;
+		int e_below = -1;
+		double d_above = Double.MAX_VALUE;
+		double d_below = 0.0;
 		for (Edge e : root.incident_edges.values()) {
 			// if edge is edge to parent ...
-			if (root.key != Math.min(e.first, e.second)) {
+			if (visited[e.first] && visited[e.second]) {
 				continue;
 			}
 			// else process child ...
-			Node c = T.get(Math.max(e.second, e.first));
-			double d_c = select_tree_DFS(T, S, d, l, c.key) + e.length;
+			Node c = (visited[e.first]) ? T.nodes.get(e.second) : T.nodes.get(e.first);
+			double d_c = select_tree_DFS(T, S, d, l, c.key, abs_root, visited) + e.length;
 			// store in array ...
 			d[c.key] = d_c;
 			if (d_c > l) {
 				S[e.index] = true;
 				d[c.key] = 0.0;
+				d_c = 0.0;
 			}
 			if (d_c > l / 2) {
-				if (d_c < d_min) {
-					if (e_min != -1) {
-						S[e_min] = true;
+				if (d_c < d_above) {
+					if (e_above != -1) {
+						S[e_above] = true;
 					}
-					e_min = e.index;
-					d_min = d_c;
+					e_above = e.index;
+					d_above = d_c;
 				} else {
 					S[e.index] = true;
+					d[c.key] = 0.0;
 				}
-			} else if (d_c > d_max) {
-				e_max = e.index;
-				d_max = d_c;
+			} else if (d_c >= d_below) {
+				e_below = e.index;
+				d_below = d_c;
 			}
 		}
-		if (e_max != e_min && d_max + d_min > l) {
+		if (e_below != e_above && d_below + d_above > l) {
 			// System.out.println(d_max + " is dmax and " + d_min + " is dmin");
-			if (e_min != -1) {
-				S[e_min] = true;
+			if (e_above != -1) {
+				S[e_above] = true;
 			}
-			return d_max;
+			return d_below;
 		} else {
-			return d_min;
+			return d_above;
 		}
 	}
 	
-	public static boolean[] parametric_search(Tree T, int k) {
+	public static boolean[] parametric_search(Tree T, int k, int root) {
 		double[] possible_distances = new double[T.nodes.size() * T.nodes.size()];
 		possible_gap_lengths(T, possible_distances);
 		Arrays.sort(possible_distances);
-		ArrayList<Double> dists = new ArrayList<>(possible_distances.length);
+		LinkedList<Double> dists = new LinkedList<Double>();
 		for (double d : possible_distances) {
 			dists.add(d);
 		}
 		Utility.removeDuplicates(dists);
-		int root = 0;
+		
 		int left = 0;
 		int right = dists.size() - 1;
+		double d = 0.0;
 		boolean[] S_opt = new boolean[T.nodes.size()];
 		while(left < right) {
 			int middle = (left + right) / 2;
 			boolean[] S = new boolean[T.edges.size()];
-			select_tree_DFS(T, S, new double[T.nodes.size()], dists.get(middle), root);
-			if (Utility.num_selected(S) <= k) {
+			d = dists.get(middle);
+			select_tree_DFS(T, S, new double[T.nodes.size()], d, root, root, new boolean[T.nodes.size()]);
+			int n = Utility.num_selected(S);
+			// System.out.println(n + ", dist: " + d);
+			if (n <= k && d > 0.0) {
 				S_opt = Arrays.copyOf(S, S.length);
 				right = middle - 1;
 			} else {
 				left = middle + 1;
 			}
 		}
+		// System.out.println(left + " " + right + " " + d + " " + dists.get(left));
 		return S_opt;
 		
+	}
+	
+	public static boolean[] k_largest(Tree T, int k) {
+		boolean[] S = new boolean[T.edges.size()];
+		T.edges.sort((Edge e_1, Edge e_2) -> {
+			return (e_1.length > e_2.length) ? 1 : -1; 
+		});
+		for (int i = 0; i < k; i++) {
+			S[T.edges.get(i).index] = true;
+		}
+		return S;
 	}
 	
 	public static void possible_gap_lengths(Tree T, double[] possible_distances) {

@@ -14,7 +14,7 @@ import me.tongfei.progressbar.ProgressBar;
 public class Main {
 	public static void main(String[] args) {
 		// lsp_eval_test();
-		//eval_runtime_test();
+		// eval_runtime_test();
 		test_tree();
 		// runtime_test_polyline();
 		// quality_test_polyline();
@@ -24,35 +24,67 @@ public class Main {
 	}
 
 	private static void test_tree() {
-		Tree T = Graph_Util.read_tree(new File("src/Benchmark_Graphs/test.tree"));
-		System.out.println(T.toString());
-		boolean[] S = new boolean[T.edges.size()];
-		double[] d = new double[T.nodes.size()];
-		S = TreeSolver.parametric_search(T, 8);
-		System.out.println(Utility.num_selected(S));
-		for (int i = 0; i < S.length; i++) {
-			if (S[i]) {
-				System.out.println(T.edges.get(i).toString());
+//		Tree T = Graph_Util.read_tree(new File("src/Benchmark_Graphs/test.tree"));
+//		System.out.println(T.toString());
+//		boolean[] S = new boolean[T.edges.size()];
+//		double[] d = new double[T.nodes.size()];
+//		S = TreeSolver.parametric_search(T, 8);
+//		System.out.println(Utility.num_selected(S));
+//		for (int i = 0; i < S.length; i++) {
+//			if (S[i]) {
+//				System.out.println(T.edges.get(i).toString());
+//			}
+//		}
+//		System.out.println("LSP-length: " + TreeSolver.eval_LSP(T, S));
+//		boolean[] S_greedy = new boolean[T.edges.size()];
+//		TreeSolver.select_greedy(T, S_greedy, 8);
+//		System.out.println();
+//		System.out.println(Utility.num_selected(S_greedy));
+//		for (int i = 0; i < S_greedy.length; i++) {
+//			if (S_greedy[i]) {
+//				System.out.println(T.edges.get(i).toString());
+//			}
+//		}
+//		System.out.println("LSP-length: " + TreeSolver.eval_LSP(T, S_greedy));
+//		
+		Graph G = Graph_Util.read_osm_graph(new File("src/Benchmark_Graphs/map.osm"));
+
+		G = Graph_Util.largest_connected_component(G);
+		G.reduce_graph();
+
+		Tree T = new Tree(G);
+		// Tree T_2 = Graph_Util.read_tree(new File("src/Benchmark_Graphs/test.tree"));
+
+		String csv = "k, random, k-largest, greedy, exact\n";
+
+		int stepSize = T.edges.size() / 20;
+		for (int k = stepSize; k < T.edges.size(); k += stepSize) {
+			csv += k + ", ";
+			
+			double q_rd = 0.0;
+			for (int i = 0; i < 10; i++) {
+			boolean[] random = Utility.random_selection(T.edges.size(), k);
+				q_rd += TreeSolver.eval_LSP(T, random) / 10;
 			}
+			csv += q_rd + ", ";
+			
+			boolean[] k_largest = TreeSolver.k_largest(T, k);
+			csv += TreeSolver.eval_LSP(T, k_largest) + ", ";
+			
+			boolean[] S_greedy = new boolean[T.edges.size()];
+			TreeSolver.select_greedy(T, S_greedy, k);
+			csv += TreeSolver.eval_LSP(T, S_greedy) + ", ";
+
+			boolean[] S_exact = TreeSolver.parametric_search(T, k, (int) (Math.random() * T.nodes.size()));
+			csv += TreeSolver.eval_LSP(T, S_exact) + "\n";
 		}
-		System.out.println("LSP-length: " + TreeSolver.eval_LSP(T, S));
-		boolean[] S_greedy = new boolean[T.edges.size()];
-		TreeSolver.select_greedy(T, S_greedy, 8);
-		System.out.println();
-		System.out.println(Utility.num_selected(S_greedy));
-		for (int i = 0; i < S_greedy.length; i++) {
-			if (S_greedy[i]) {
-				System.out.println(T.edges.get(i).toString());
-			}
-		}
-		System.out.println("LSP-length: " + TreeSolver.eval_LSP(T, S_greedy));
-		
+		System.out.println(csv);
+
 	}
-	
+
 	private static void eval_runtime_test() {
 		String csv = "";
 
-		
 //		for (double i = 0.01; i < 0.2; i += 0.01) {
 //			Graph G = Graph_Util.subgraph_100_k(i);
 //			System.out.println("|V| = " + G.num_nodes() + ", |E| = " + G.num_edges());
@@ -61,7 +93,7 @@ public class Main {
 //			boolean[] S = Utility.random_selection(G.num_edges(), k);
 //			csv += test_ten_times(G, S);
 //		}
-		
+
 //		Graph G = Graph_Util.read_dimacs_graph(new File("src/Benchmark_Graphs/USA-road-d.NY.gr"));
 //		G = Graph_Util.largest_connected_component(G);
 //		G.reduce_graph();
@@ -72,8 +104,7 @@ public class Main {
 //		csv += test_ten_times(G, Utility.random_selection(G.num_edges(), k));
 //		
 //		
-		
-		
+
 //		Graph G = Graph_Util.read_dimacs_graph(new File("src/Benchmark_Graphs/USA-road-d.FLA.gr"));
 //		G = Graph_Util.largest_connected_component(G);
 //		G.reduce_graph();
@@ -82,7 +113,7 @@ public class Main {
 //		int k = (int) Math.sqrt(G.num_edges());
 //		csv += G.num_nodes() + ", ";
 //		csv += test_ten_times(G, Utility.random_selection(G.num_edges(), k));
-		
+
 //		Graph G = Graph_Util.read_dimacs_graph(new File("src/Benchmark_Graphs/USA-road-d.LKS.gr"));
 //		G = Graph_Util.largest_connected_component(G);
 //		G.reduce_graph();
@@ -92,7 +123,7 @@ public class Main {
 //		csv += G.num_nodes() + ", ";
 //		csv += test_ten_times(G, Utility.random_selection(G.num_edges(), k));
 //		
-		
+
 //		Graph G = Graph_Util.read_dimacs_graph(new File("src/Benchmark_Graphs/USA-road-d.CAL.gr"));
 //		G = Graph_Util.largest_connected_component(G);
 //		G.reduce_graph();
@@ -119,18 +150,16 @@ public class Main {
 //		k = (int) Math.sqrt(G.num_edges());
 //		csv += G.num_nodes() + ", ";
 //		csv += test_ten_times(G, Utility.random_selection(G.num_edges(), k));
-		
-		
+
 		Graph G = Graph_Util.read_usa_graph(new File("src/Benchmark_Graphs/TX.tmp"));
 		G = Graph_Util.largest_connected_component(G);
 		G.reduce_graph();
 		System.out.println("|V| = " + G.num_nodes() + ", |E| = " + G.num_edges());
-		
+
 		int k = (int) Math.sqrt(G.num_edges());
 		csv += G.num_nodes() + ", ";
 		csv += test_ten_times(G, Utility.random_selection(G.num_edges(), k));
-		
-		
+
 //		Graph G = Graph_Util.read_dimacs_graph(new File("src/Benchmark_Graphs/USA-road-d.W.gr"));
 //		G = Graph_Util.largest_connected_component(G);
 //		G.reduce_graph();
@@ -140,7 +169,7 @@ public class Main {
 //		csv += G.num_nodes() + ", ";
 //		csv += test_ten_times(G, Utility.random_selection(G.num_edges(), k));
 //		
-		
+
 		System.out.println(csv);
 	}
 

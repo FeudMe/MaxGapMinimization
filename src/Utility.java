@@ -1,5 +1,7 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Random;
 
 /**
@@ -26,6 +28,19 @@ public abstract class Utility {
 			if (here == next) {
 				L.remove(i);
 				i--;
+			}
+		}
+	}
+	
+	public static void removeDuplicates(LinkedList<Double> L) {
+		double prev = -1.0d;
+		Iterator<Double> it = L.iterator();
+		while (it.hasNext()) {
+			double curr = it.next();
+			if (curr == prev) {
+				it.remove();
+			} else {
+				prev = curr;
 			}
 		}
 	}
