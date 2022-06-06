@@ -129,6 +129,8 @@ public abstract class GraphSolver {
 		}
 		return sel;
 	}
+	
+	
 
 	/**
 	 * Gap-based sequential addition algorithm
@@ -176,6 +178,45 @@ public abstract class GraphSolver {
 		return sel;
 	}
 
+	public static boolean[] sequential_addition_farthest_midpoint(Graph G, int k, boolean notify) {
+		boolean[] sel = new boolean[G.num_edges()];
+		Random rd = new Random();
+		
+		Edge start_edge = G.get_edges().get(rd.nextInt(G.num_edges()));
+		sel[start_edge.index] = true;
+		double[] dist = Graph_Eval.dijkstra_gap_eval(sel, G);
+		int prev_sel_1 = start_edge.first;
+		int prev_sel_2 = start_edge.second;
+		if (notify) {
+			try {
+				ProgressBar pb = new ProgressBar("Maximum Gap", k);
+				for (int i = 1; i < k; i++) {
+					dist = Graph_Eval.dijkstra_two_source_update(G.get_nodes().get(prev_sel_1),
+							G.get_nodes().get(prev_sel_2), dist, G);
+					Edge max_len = Graph_Eval.evaluate_selection_farthest_midpoint(sel, G).first;
+					prev_sel_1 = max_len.first;
+					prev_sel_2 = max_len.second;
+					sel[max_len.index] = true;
+					pb.step();
+				}
+				pb.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else {
+			for (int i = 1; i < k; i++) {
+				dist = Graph_Eval.dijkstra_two_source_update(G.get_nodes().get(prev_sel_1),
+						G.get_nodes().get(prev_sel_2), dist, G);
+				Edge max_len = Graph_Eval.evaluate_selection_farthest_midpoint(sel, G).first;
+				prev_sel_1 = max_len.first;
+				prev_sel_2 = max_len.second;
+				sel[max_len.index] = true;
+			}
+		}
+		return sel;
+	}
+
+	
 	/**
 	 * Computes a heuristic for MGMP. Performs a parallel variant of the two-source
 	 * shortest path problem.

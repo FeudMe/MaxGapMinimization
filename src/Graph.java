@@ -28,6 +28,20 @@ public class Graph {
 		this.nodes = new HashMap<Integer, Node>();
 		this.TWO_D_TYPE = 0;
 	}
+	
+	public Graph(double[] polyline) {
+		this.nodes = new HashMap<Integer, Node>(polyline.length + 1);
+		for (int i = 0; i < polyline.length + 1; i++) {
+			this.nodes.put(i, new Node(i));
+		}
+		this.edges = new ArrayList<Edge>(polyline.length);
+		for (int i = 0; i < polyline.length; i++) {
+			Edge e = new Edge(i, i + 1, polyline[i], i);
+			this.nodes.get(i).incident_edges.put(e.index, e);
+			this.nodes.get(i + 1).incident_edges.put(e.index, e);
+			this.edges.add(e);
+		}
+	}
 
 	/**
 	 * Add a node to the graph

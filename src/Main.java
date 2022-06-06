@@ -15,11 +15,11 @@ public class Main {
 	public static void main(String[] args) {
 		// lsp_eval_test();
 		// eval_runtime_test();
-		test_tree();
+		// test_tree();
 		// runtime_test_polyline();
 		// quality_test_polyline();
 		// quality_test_graph();
-		// graph_test();
+		graph_test();
 		// test_heap();
 	}
 
@@ -47,7 +47,7 @@ public class Main {
 //		}
 //		System.out.println("LSP-length: " + TreeSolver.eval_LSP(T, S_greedy));
 //		
-		Graph G = Graph_Util.read_osm_graph(new File("src/Benchmark_Graphs/map.osm"));
+		Graph G = Graph_Util.read_osm_graph(new File("src/Benchmark_Graphs/larger_map.osm"));
 
 		G = Graph_Util.largest_connected_component(G);
 		G.reduce_graph();
@@ -57,27 +57,41 @@ public class Main {
 
 		String csv = "k, random, k-largest, greedy, exact\n";
 
-		int stepSize = T.edges.size() / 20;
+		int stepSize = T.edges.size() / 50;
 		for (int k = stepSize; k < T.edges.size(); k += stepSize) {
+			System.out.print(k / stepSize + ", ");
+			double cutoff = Double.MAX_VALUE;
+			
 			csv += k + ", ";
 			
 			double q_rd = 0.0;
 			for (int i = 0; i < 10; i++) {
 			boolean[] random = Utility.random_selection(T.edges.size(), k);
-				q_rd += TreeSolver.eval_LSP(T, random) / 10;
+				double random_d	= TreeSolver.eval_tree_DFS(T, random, 0, 0, new boolean[T.nodes.size()]).second;
+				cutoff = Math.min(random_d, cutoff);
+				q_rd += (random_d) / 10;
 			}
 			csv += q_rd + ", ";
 			
 			boolean[] k_largest = TreeSolver.k_largest(T, k);
-			csv += TreeSolver.eval_LSP(T, k_largest) + ", ";
+			double k_largest_d = TreeSolver.eval_tree_DFS(T, k_largest, 0, 0, new boolean[T.nodes.size()]).second;
+			cutoff = Math.min(k_largest_d, cutoff);
+			csv += k_largest_d + ", ";
+			
+			
 			
 			boolean[] S_greedy = new boolean[T.edges.size()];
 			TreeSolver.select_greedy(T, S_greedy, k);
-			csv += TreeSolver.eval_LSP(T, S_greedy) + ", ";
+			double greedy_d = TreeSolver.eval_tree_DFS(T, S_greedy, 0, 0, new boolean[T.nodes.size()]).second;
+			cutoff = Math.min(cutoff, greedy_d);
+			csv += greedy_d + ", ";
 
 			boolean[] S_exact = TreeSolver.parametric_search(T, k, (int) (Math.random() * T.nodes.size()));
-			csv += TreeSolver.eval_LSP(T, S_exact) + "\n";
+			
+			csv += TreeSolver.eval_tree_DFS(T, S_exact, 0, 0, new boolean[T.nodes.size()]).second + "\n";
 		}
+		System.out.println();
+		System.out.println();
 		System.out.println(csv);
 
 	}
@@ -353,7 +367,7 @@ public class Main {
 	 */
 	public static void graph_test() {
 		System.out.println(
-				"Starting the large graph quality test. -- Abort if this is taking too long for you. You can expect about an hour of waiting.");
+				"Starting the large graph quality test. -- Abort if this is taking too long for you. You can expect hours of waiting.");
 
 		File f = new File("src/Benchmark_Graphs/100k_j_d.txt");
 		Graph G = Graph_Util.read_graph(f);
@@ -466,38 +480,72 @@ public class Main {
 		System.out.println("Starting the polyline quality test ...");
 		int size = 10000;
 		double range = 10.0;
+		double[] A;
 		System.out.println("Creating random array of double values -- size: " + size + ", value range: " + range);
-		double[] A = Utility.random_Array(size, range);
-		NumberFormat nf = NumberFormat.getNumberInstance(Locale.GERMAN);
-		String csv = "k; random; uniform; greedy; parametric; graph; 1-OPT\n";
-		for (int k = 500; k <= 10000; k += 500) {
-			csv += k + "; ";
+		String csv = "k, random, uniform, greedy, parametric, farthest midpoint, graph, 1-OPT\n";
+		for (int k = 250; k <= 10000; k += 250) {
+			csv += k + ", ";
 			System.out.println(k + "/" + 10000);
 			// System.out.println(Arrays.toString(A));
+			double gap = 0.0;
+			/* 
+			 * for (int i = 0; i < 5; i++) {
+			
+				A = Utility.random_Array(size, range);
+				boolean[] sel = Utility.random_selection(size, k);
+				gap += Utility.max_gap(A, sel) / 5;
+			}
+			csv += gap + ", ";
 
-			boolean[] sel = Utility.random_selection(size, k);
-			double gap = Utility.max_gap(A, sel);
-			csv += nf.format(gap) + "; ";
+			gap = 0.0;
+			for (int i = 0; i < 5; i++) {
+				A = Utility.random_Array(size, range);
+				boolean[] sel = PolyLineSolver.uniform_selection_heuristic(A, k);
+				gap += Utility.max_gap(A, sel) / 5;
+			}
+			csv += gap + ", ";
 
-			sel = PolyLineSolver.uniform_selection_heuristic(A, k);
-			gap = Utility.max_gap(A, sel);
-			csv += nf.format(gap) + "; ";
+			gap = 0.0;
+			for (int i = 0; i < 5; i++) {
+				A = Utility.random_Array(size, range);
+				boolean[] sel = PolyLineSolver.greedy_heuristic(A, k);
+				gap += Utility.max_gap(A, sel) / 5;
+			}
+			csv += gap + ", ";
+			
+			gap = 0.0;
+			for (int i = 0; i < 5; i++) {
+				A = Utility.random_Array(size, range);
+				boolean[] sel = PolyLineSolver.parametric_search_binary_search(A, k);
+				gap += Utility.max_gap(A, sel) / 5;
+			}
+			csv += gap + ", ";
 
-			sel = PolyLineSolver.greedy_heuristic(A, k);
-			gap = Utility.max_gap(A, sel);
-			csv += nf.format(gap) + "; ";
-
-			sel = PolyLineSolver.parametric_search_binary_search(A, k);
-			gap = Utility.max_gap(A, sel);
-			csv += nf.format(gap) + "; ";
-
-			sel = PolyLineSolver.graph_heuristic(A, k);
-			gap = Utility.max_gap(A, sel);
-			csv += nf.format(gap) + "; ";
-
-			sel = PolyLineSolver.one_opt(A, sel);
-			gap = Utility.max_gap(A, sel);
-			csv += nf.format(gap) + "\n";
+			gap = 0.0;
+			for (int i = 0; i < 5; i++) {
+				A = Utility.random_Array(size, range);
+				Graph G = new Graph(A);
+				boolean[] sel = GraphSolver.sequential_addition_farthest_midpoint(G, k, false);
+				gap += Utility.max_gap(A, sel) / 5;
+			}
+			csv += gap + ", ";	
+			*/
+			gap = 0.0;
+			boolean[][] sel = new boolean[5][];
+			double[][] Arrays = new double[5][]; 
+			for (int i = 0; i < 5; i++) {
+				Arrays[i] = Utility.random_Array(size, range);
+				sel[i] = PolyLineSolver.graph_heuristic(Arrays[i], k);
+				gap += Utility.max_gap(Arrays[i], sel[i]) / 5;
+			}
+			csv += gap + ", ";
+			
+			gap = 0.0;
+			for (int i = 0; i < 5; i++) {
+				boolean[] sel_1_opt = PolyLineSolver.one_opt(Arrays[i], sel[i]);
+				gap += Utility.max_gap(Arrays[i], sel_1_opt) / 5;
+			}
+			csv += gap + "\n";
 
 		}
 

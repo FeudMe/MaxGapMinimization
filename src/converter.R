@@ -3,7 +3,11 @@ library(osmar)
 
 setwd("C:/Users/olive/eclipse-workspace/MaxGapMinimization/src")
 
-file = get_osm(complete_file(), source = osmsource_file("map.osm"))
+map = get_osm(complete_file(), source = osmsource_file("map.osm"))
 
-graph = as.undirected(as_igraph(file))
-plot(graph, vertex.label = NA, vertex.size = 0, vertex.shape = 'none', edge.color = "black", edge.)
+for (i in range(0, map.nodes.size -1)) {
+  print(map.nodes[i])
+}
+
+plot(map)
+graph = as_igraph(map)

@@ -14,14 +14,15 @@ public abstract class TreeSolver {
 	 * @return the longest unblocked distance from the subtree's root to a recursive
 	 *         child
 	 */
-	public static double select_tree_DFS(Tree T, boolean[] S, double[] d, double l, int root_index, int abs_root, boolean[] visited) {
+	public static double select_tree_DFS(Tree T, boolean[] S, double[] d, double l, int root_index, int abs_root,
+			boolean[] visited) {
 		Node root = T.get(root_index);
 		if (root.degree() == 1 && root_index != abs_root) {
 			// System.out.println(root_index + " returned early");
 			return 0.0d;
 		}
 		visited[root.key] = true;
-		
+
 		int e_above = -1;
 		int e_below = -1;
 		double d_above = Double.MAX_VALUE;
@@ -67,7 +68,42 @@ public abstract class TreeSolver {
 			return d_above;
 		}
 	}
-	
+
+	public static Tupel<Double, Double> eval_tree_DFS(Tree T, boolean[] S, int root_index, int abs_root,
+			boolean[] visited) {
+		Node root = T.get(root_index);
+		if (root.degree() == 1 && root_index != abs_root) { // 
+			// System.out.println(root_index + " returned early");
+			return new Tupel<Double, Double>(0.0, 0.0);
+		}
+		visited[root.key] = true;
+
+		double d_max = 0.0;
+		double d_max_2 = 0.0;
+		double rec_max = 0.0;
+		for (Edge e : root.incident_edges.values()) {
+			// if edge is edge to parent ...
+			if ((visited[e.first] && visited[e.second])) {
+				continue;
+			}
+			// else process child ...
+			Node c = (visited[e.first]) ? T.nodes.get(e.second) : T.nodes.get(e.first);
+			Tupel<Double, Double> d_c = eval_tree_DFS(T, S, c.key, abs_root, visited);
+			d_c.first = (S[e.index]) ? 0.0 : d_c.first + e.length;
+
+			rec_max = Math.max(rec_max, d_c.second);
+			if (d_c.first > d_max) {
+				d_max_2 = d_max;
+				d_max = d_c.first;
+			} else if (d_c.first > d_max_2) {
+				d_max_2 = d_c.first;
+			}
+
+		}
+		return new Tupel<Double, Double>(d_max, Math.max(d_max + d_max_2, rec_max));
+
+	}
+
 	public static boolean[] parametric_search(Tree T, int k, int root) {
 		double[] possible_distances = new double[T.nodes.size() * T.nodes.size()];
 		possible_gap_lengths(T, possible_distances);
@@ -77,12 +113,12 @@ public abstract class TreeSolver {
 			dists.add(d);
 		}
 		Utility.removeDuplicates(dists);
-		
+
 		int left = 0;
 		int right = dists.size() - 1;
 		double d = 0.0;
 		boolean[] S_opt = new boolean[T.nodes.size()];
-		while(left < right) {
+		while (left < right) {
 			int middle = (left + right) / 2;
 			boolean[] S = new boolean[T.edges.size()];
 			d = dists.get(middle);
@@ -98,28 +134,29 @@ public abstract class TreeSolver {
 		}
 		// System.out.println(left + " " + right + " " + d + " " + dists.get(left));
 		return S_opt;
-		
+
 	}
-	
+
 	public static boolean[] k_largest(Tree T, int k) {
 		boolean[] S = new boolean[T.edges.size()];
 		T.edges.sort((Edge e_1, Edge e_2) -> {
-			return (e_1.length > e_2.length) ? 1 : -1; 
+			return (e_1.length > e_2.length) ? 1 : -1;
 		});
 		for (int i = 0; i < k; i++) {
 			S[T.edges.get(i).index] = true;
 		}
 		return S;
 	}
-	
+
 	public static void possible_gap_lengths(Tree T, double[] possible_distances) {
 		for (Node n : T.nodes) {
 			boolean[] visited = new boolean[T.nodes.size()];
 			distancesDFS(T, possible_distances, n.key, visited, n.key, 0);
 		}
 	}
-	
-	public static void distancesDFS(Tree T, double[] distances, int root_index, boolean[] visited, int source, double d) {
+
+	public static void distancesDFS(Tree T, double[] distances, int root_index, boolean[] visited, int source,
+			double d) {
 		visited[root_index] = true;
 		distances[T.nodes.size() * source + root_index] = d;
 		distances[T.nodes.size() * root_index + source] = d;
@@ -127,7 +164,7 @@ public abstract class TreeSolver {
 			return;
 		}
 		for (Edge e : T.get(root_index).incident_edges.values()) {
-			int c_key =	(e.first == root_index) ? e.second : e.first;
+			int c_key = (e.first == root_index) ? e.second : e.first;
 			if (visited[c_key]) {
 				continue;
 			}
@@ -143,37 +180,37 @@ public abstract class TreeSolver {
 			S[t.first] = true;
 		}
 	}
-	
+
 	public static double eval_LSP(Tree T, boolean[] S) {
 		double lsp = 0.0;
 
 		for (Node n : T.nodes) {
 			boolean[] visited = new boolean[T.nodes.size()];
-			double d_max = max_DFS(n.key, T, S, visited);
+			double d_max = max_DFS(n.key, n.key, T, S, visited);
 			lsp = Math.max(d_max, lsp);
 		}
-		
+
 		return lsp;
 	}
-	
-	public static double max_DFS(int root_index, Tree T, boolean[] S, boolean[] visited) {
+
+	public static double max_DFS(int root_index, int root_abs, Tree T, boolean[] S, boolean[] visited) {
 		visited[root_index] = true;
 		Node root = T.get(root_index);
-		if (root.degree() == 1) {
+		if (root.degree() == 1 && root_index != root_abs) {
 			return 0.0;
 		}
 		double d_max = 0.0;
 		for (Edge e : root.incident_edges.values()) {
-			int c_key =	(e.first == root_index) ? e.second : e.first;
+			int c_key = (e.first == root_index) ? e.second : e.first;
 			if (visited[c_key] || S[e.index]) {
 				continue;
-			} 
-			
+			}
+
 			Node c = T.get(c_key);
-			double d = max_DFS(c.key, T, S, visited) + e.length;
+			double d = max_DFS(c.key, root_abs,T, S, visited) + e.length;
 			d_max = Math.max(d_max, d);
 		}
-		
+
 		return d_max;
 	}
 
