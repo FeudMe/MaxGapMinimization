@@ -193,7 +193,7 @@ public abstract class GraphSolver {
 				for (int i = 1; i < k; i++) {
 					dist = Graph_Eval.dijkstra_two_source_update(G.get_nodes().get(prev_sel_1),
 							G.get_nodes().get(prev_sel_2), dist, G);
-					Edge max_len = Graph_Eval.evaluate_selection_farthest_midpoint(sel, G).first;
+					Edge max_len = Graph_Eval.evaluate_selection_farthest_midpoint(sel, G, dist).first;
 					prev_sel_1 = max_len.first;
 					prev_sel_2 = max_len.second;
 					sel[max_len.index] = true;
@@ -207,7 +207,7 @@ public abstract class GraphSolver {
 			for (int i = 1; i < k; i++) {
 				dist = Graph_Eval.dijkstra_two_source_update(G.get_nodes().get(prev_sel_1),
 						G.get_nodes().get(prev_sel_2), dist, G);
-				Edge max_len = Graph_Eval.evaluate_selection_farthest_midpoint(sel, G).first;
+				Edge max_len = Graph_Eval.evaluate_selection_farthest_midpoint(sel, G, dist).first;
 				prev_sel_1 = max_len.first;
 				prev_sel_2 = max_len.second;
 				sel[max_len.index] = true;

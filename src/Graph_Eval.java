@@ -24,7 +24,7 @@ public abstract class Graph_Eval {
 		for (Node v : G.get_nodes().values()) {
 			int key = v.key;
 			// define comparator
-			
+
 			// initialize priority queue
 			MHPriorityQueue Q = new MHPriorityQueue(G.num_nodes());
 			Q.insert(v, dist[key][key]);
@@ -296,14 +296,14 @@ public abstract class Graph_Eval {
 			Tupel<Double, Node> t = Q.extract_min();
 			Node n = t.second;
 			int key = n.reduced_key;
-			
+
 			if (distance[key] < t.first) {
 				continue;
 			}
 			for (Edge e : n.incident_edges.values()) {
 				int index_first = G.get_nodes().get(e.first).reduced_key;
 				int index_second = G.get_nodes().get(e.second).reduced_key;
-				
+
 				double alt = distance[key] + e.length;
 
 				if (e.first == key) {
@@ -355,7 +355,7 @@ public abstract class Graph_Eval {
 			}
 		}
 	}
-	
+
 	/*
 	 * static void run_dijkstra(Graph G, double[] distance) {
 	 * Comparator<Tupel<Double, Node>> comp = new Comparator<Tupel<Double, Node>>()
@@ -690,10 +690,35 @@ public abstract class Graph_Eval {
 		return distance;
 	}
 
-	public static Tupel<Edge, Double> evaluate_selection_farthest_midpoint(boolean[] sel, Graph G) {
+	public static Tupel<Edge, Double> evaluate_selection_farthest_midpoint(boolean[] sel, Graph G, double[] dist) {
 		double max_gap = 0.0;
 		Edge max_edge = null;
-		double[] dist = dijkstra_gap_eval(sel, G);
+		for (Edge e : G.get_edges()) {
+			if (!sel[e.index]) {
+				double d_e = Math.min(dist[e.first], dist[e.second]) + 0.5 * e.length;
+				if (max_gap < d_e || max_gap == 0.0) {
+					max_edge = e;
+					max_gap = d_e;
+				}
+			}
+		}
+		return new Tupel<Edge, Double>(max_edge, max_gap);
+	}
+
+	public static Tupel<Edge, Double> evaluate_selection_farthest_midpoint(boolean[] sel, Graph G) {
+		double[] dist = new double[G.num_nodes()];
+		for (int i = 0; i < dist.length; i++) {
+			dist[i] = Double.MAX_VALUE;
+		}
+		for (int i = 0; i < sel.length; i++) {
+			if (sel[i]) {
+				dist[G.get_edges().get(i).first] = 0.0;
+				dist[G.get_edges().get(i).second] = 0.0;
+			}
+		}
+		run_dijkstra(G, dist);
+		double max_gap = 0.0;
+		Edge max_edge = null;
 		for (Edge e : G.get_edges()) {
 			if (!sel[e.index]) {
 				double d_e = Math.min(dist[e.first], dist[e.second]) + 0.5 * e.length;

@@ -1,5 +1,7 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Random;
 
 /**
@@ -113,18 +115,27 @@ public abstract class PolyLineSolver {
 		// calculate delta_k
 		double delta_k = Utility.calculate_delta_k(A, k);
 		// generate all possible gaps < delta_k
-		ArrayList<Double> gaps = Utility.generate_possible_gaps(A, delta_k);
+		LinkedList<Double> gaps = Utility.generate_possible_gaps(A, delta_k);
 		// sort array descendingly
 		Collections.sort(gaps, Collections.reverseOrder());
 		// filter duplicates
 		Utility.removeDuplicates(gaps);
+		double[] gaps_arr = new double[gaps.size()];
+		Iterator<Double> it = gaps.iterator();
+		{
+			int i = 0;
+			while (it.hasNext()) {
+				gaps_arr[i] = it.next();
+				i++;
+			}
+		}
 		// for each gap length
 		// compute minimal gap
 		int index_of_min_gap = -1;
 		int i = 0;
 		for (; i < gaps.size(); i++) {
-			ArrayList<Integer> selected_indices = new ArrayList<>();
-			double current_gap = gaps.get(i);
+			LinkedList<Integer> selected_indices = new LinkedList<>();
+			double current_gap = gaps_arr[i];
 			double gap_filler = 0.0;
 			for (int j = 0; j < A.length && selected_indices.size() <= k; j++) {
 				if (gap_filler + A[j] > current_gap) {
@@ -139,7 +150,7 @@ public abstract class PolyLineSolver {
 				break;
 			}
 		}
-		double min_gap = gaps.get(index_of_min_gap);
+		double min_gap = gaps_arr[index_of_min_gap];
 		boolean[] selection = Utility.selection_from_gap_length(A, min_gap);
 		return selection;
 	}
@@ -156,11 +167,20 @@ public abstract class PolyLineSolver {
 		// calculate delta_k
 		double delta_k = Utility.calculate_delta_k(A, k);
 		// generate all possible gaps < delta_k
-		ArrayList<Double> gaps = Utility.generate_possible_gaps(A, delta_k);
+		LinkedList<Double> gaps = Utility.generate_possible_gaps(A, delta_k);
 		// sort array descendingly
 		Collections.sort(gaps, Collections.reverseOrder());
 		// filter duplicates
 		Utility.removeDuplicates(gaps);
+		double[] gaps_arr = new double[gaps.size()];
+		Iterator<Double> it = gaps.iterator();
+		{
+			int i = 0;
+			while (it.hasNext()) {
+				gaps_arr[i] = it.next();
+				i++;
+			}
+		}
 		// for each gap length
 		// compute minimal gap
 		int index_to_check = gaps.size() / 2;
@@ -169,8 +189,8 @@ public abstract class PolyLineSolver {
 		double prev_opt_gap = Double.MAX_VALUE;
 		boolean optimal = false;
 		while (!optimal) {
-			ArrayList<Integer> selected_indices = new ArrayList<>();
-			double current_gap = gaps.get(index_to_check);
+			LinkedList<Integer> selected_indices = new LinkedList<>();
+			double current_gap = gaps_arr[index_to_check];
 			double gap_filler = 0.0;
 			for (int j = 0; j < A.length && selected_indices.size() <= k; j++) {
 				if (gap_filler + A[j] > current_gap) {
@@ -241,7 +261,7 @@ public abstract class PolyLineSolver {
 						if (new_max_gap_length < curr_max_gap_length) {
 							has_changed = true;
 							curr_max_gap_length = new_max_gap_length;
-							//System.out.println(new_max_gap_length);
+							// System.out.println(new_max_gap_length);
 						} else {
 							sel[j] = false;
 							sel[i] = true;

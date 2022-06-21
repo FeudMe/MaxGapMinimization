@@ -15,11 +15,11 @@ public class Main {
 	public static void main(String[] args) {
 		// lsp_eval_test();
 		// eval_runtime_test();
-		// test_tree();
+		test_tree();
 		// runtime_test_polyline();
 		// quality_test_polyline();
 		// quality_test_graph();
-		graph_test();
+		// graph_test();
 		// test_heap();
 	}
 
@@ -61,25 +61,23 @@ public class Main {
 		for (int k = stepSize; k < T.edges.size(); k += stepSize) {
 			System.out.print(k / stepSize + ", ");
 			double cutoff = Double.MAX_VALUE;
-			
+
 			csv += k + ", ";
-			
+
 			double q_rd = 0.0;
 			for (int i = 0; i < 10; i++) {
-			boolean[] random = Utility.random_selection(T.edges.size(), k);
-				double random_d	= TreeSolver.eval_tree_DFS(T, random, 0, 0, new boolean[T.nodes.size()]).second;
+				boolean[] random = Utility.random_selection(T.edges.size(), k);
+				double random_d = TreeSolver.eval_tree_DFS(T, random, 0, 0, new boolean[T.nodes.size()]).second;
 				cutoff = Math.min(random_d, cutoff);
 				q_rd += (random_d) / 10;
 			}
 			csv += q_rd + ", ";
-			
+
 			boolean[] k_largest = TreeSolver.k_largest(T, k);
 			double k_largest_d = TreeSolver.eval_tree_DFS(T, k_largest, 0, 0, new boolean[T.nodes.size()]).second;
 			cutoff = Math.min(k_largest_d, cutoff);
 			csv += k_largest_d + ", ";
-			
-			
-			
+
 			boolean[] S_greedy = new boolean[T.edges.size()];
 			TreeSolver.select_greedy(T, S_greedy, k);
 			double greedy_d = TreeSolver.eval_tree_DFS(T, S_greedy, 0, 0, new boolean[T.nodes.size()]).second;
@@ -87,7 +85,7 @@ public class Main {
 			csv += greedy_d + ", ";
 
 			boolean[] S_exact = TreeSolver.parametric_search(T, k, (int) (Math.random() * T.nodes.size()));
-			
+
 			csv += TreeSolver.eval_tree_DFS(T, S_exact, 0, 0, new boolean[T.nodes.size()]).second + "\n";
 		}
 		System.out.println();
@@ -210,7 +208,7 @@ public class Main {
 		duration = 0;
 		for (int j = 0; j < 10; j++) {
 			start = System.nanoTime();
-			Graph_Eval.evaluate_selection_farthest_midpoint(S, G);
+			// Graph_Eval.evaluate_selection_farthest_midpoint(S, G);
 			duration += (System.nanoTime() - start) / 10;
 		}
 		lcsv += duration + "\n";
@@ -252,7 +250,7 @@ public class Main {
 	 */
 	private static void quality_test_graph() {
 		System.out.println("Starting the graph quality test ...");
-		File f = new File("src/Benchmark_Graphs/map.osm");
+		File f = new File("src/Benchmark_Graphs/larger_map.osm");
 		Graph G = Graph_Util.read_osm_graph(f);
 		System.out.println("|V| = " + G.num_nodes() + ", |E| = " + G.num_edges());
 
@@ -265,47 +263,68 @@ public class Main {
 		System.out.println("|V| = " + G.num_nodes() + ", |E| = " + G.num_edges());
 		System.out.println(Graph_Util.connected_components(G));
 
-		String csv = "k; random gap; greedy gap; sequential addition gap; MGM gap; 1-OPT gap\n";
-		String csv_dist = "k; random; greedy; sequential addition; MGM dist; 1-OPT\n";
-		int stepsize = G.num_edges() / 15;
+		String csv = "k, random gap, greedy gap, sequential addition gap, MGM gap, fm, 1-OPT gap\n";
+		String csv_dist = "k, random, greedy, sequential addition, MGM dist, fm, 1-OPT\n";
+		String csv_fm = "k, random, greedy, sequential addition, MGM dist, fm,  1-OPT\n";
+		int stepsize = G.num_edges() / 25;
 		boolean[] dist_sel = new boolean[G.num_edges()];
 		boolean[] gap_sel = new boolean[G.num_edges()];
 		boolean[] rd_sel = new boolean[G.num_edges()];
 		boolean[] greedy_sel = new boolean[G.num_edges()];
 		boolean[] one_opt_sel = new boolean[G.num_edges()];
+		boolean[] fm_sel = new boolean[G.num_edges()];
 		for (int i = stepsize; i < G.num_edges(); i += stepsize) {
-			csv += i + "; ";
+			csv += i + ", ";
+			csv_dist += i + ", ";
+			csv_fm += i + ", ";
 			System.out.println(i + "/" + G.num_edges() + " edges to be selected");
 			double quality = 0.0;
 			double quality_gap = 0.0;
+			double quality_fm = 0.0;
 
 			int rounding_runs = 25;
 			for (int j = 0; j < rounding_runs; j++) {
 				rd_sel = Utility.random_selection(G.num_edges(), i);
 				quality += Utility.max(Graph_Eval.dijkstra_default(rd_sel, G)) / rounding_runs;
 				quality_gap += Graph_Eval.evaluate_selection(rd_sel, G).second / rounding_runs;
+				quality_fm += Graph_Eval.evaluate_selection_farthest_midpoint(rd_sel, G).second / rounding_runs;
 			}
-			csv_dist += String.format("%1$,.7f", quality) + "; ";
-			csv += String.format("%1$,.7f", quality_gap) + "; ";
+			csv_dist += quality + ", ";
+			csv += quality_gap + ", ";
+			csv_fm += quality_fm + ", ";
 
 			greedy_sel = GraphSolver.greedy_heuristic(G, i);
-			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Eval.dijkstra_default(greedy_sel, G))) + "; ";
-			csv += String.format("%1$,.7f", Graph_Eval.evaluate_selection(greedy_sel, G).second) + "; ";
+			csv_dist += Utility.max(Graph_Eval.dijkstra_default(greedy_sel, G)) + ", ";
+			csv += Graph_Eval.evaluate_selection(greedy_sel, G).second + ", ";
+			csv_fm += Graph_Eval.evaluate_selection_farthest_midpoint(greedy_sel, G).second + ", ";
 
 			dist_sel = GraphSolver.k_seq_add_dist(dist_sel, G, stepsize);
-			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Eval.dijkstra_default(dist_sel, G))) + "; ";
-			csv += String.format("%1$,.7f", Graph_Eval.evaluate_selection(dist_sel, G).second) + "; ";
+			csv_dist += Utility.max(Graph_Eval.dijkstra_default(dist_sel, G)) + ", ";
+			csv += Graph_Eval.evaluate_selection(dist_sel, G).second + ", ";
+			csv_fm += Graph_Eval.evaluate_selection_farthest_midpoint(dist_sel, G).second + ", ";
 
 			gap_sel = GraphSolver.k_seq_add_gap(gap_sel, G, stepsize);
-			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Eval.dijkstra_default(gap_sel, G))) + "; ";
-			csv += String.format("%1$,.7f", Graph_Eval.evaluate_selection(gap_sel, G).second) + "; ";
+			csv_dist += Utility.max(Graph_Eval.dijkstra_default(gap_sel, G)) + ", ";
+			csv += Graph_Eval.evaluate_selection(gap_sel, G).second + ", ";
+			csv_fm += Graph_Eval.evaluate_selection_farthest_midpoint(gap_sel, G).second + ", ";
 
-			one_opt_sel = GraphSolver.one_opt_naive(G, greedy_sel.clone());
-			csv_dist += String.format("%1$,.7f", Utility.max(Graph_Eval.dijkstra_default(one_opt_sel, G))) + "\n";
-			csv += String.format("%1$,.7f", Graph_Eval.evaluate_selection(one_opt_sel, G).second) + "\n";
+			fm_sel = GraphSolver.sequential_addition_farthest_midpoint(G, i, false);
+			csv_dist += Utility.max(Graph_Eval.dijkstra_default(fm_sel, G)) + ", ";
+			csv += Graph_Eval.evaluate_selection(fm_sel, G).second + ", ";
+			csv_fm += Graph_Eval.evaluate_selection_farthest_midpoint(fm_sel, G).second + ", ";
+
+			one_opt_sel = GraphSolver.one_opt_naive(G, gap_sel.clone());
+			csv_dist += Utility.max(Graph_Eval.dijkstra_default(one_opt_sel, G)) + "\n";
+			csv += Graph_Eval.evaluate_selection(one_opt_sel, G).second + "\n";
+			csv_fm += Graph_Eval.evaluate_selection_farthest_midpoint(one_opt_sel, G).second + "\n";
 
 		}
+		System.out.println();
 		System.out.println(csv);
+		System.out.println();
+		System.out.println(csv_dist);
+		System.out.println();
+		System.out.println(csv_fm);
 		// System.out.println(csv_dist);
 	}
 
@@ -332,7 +351,7 @@ public class Main {
 				// System.out.println("Max Dist: " + max_dist);
 				double max_composite_gap = Graph_Eval.evaluate_selection(S, G, distance).second;
 				// System.out.println("Max Composite Gap: " + max_composite_gap);
-				double farthest_midpoint_dist = Graph_Eval.evaluate_selection_farthest_midpoint(S, G).second;
+				double farthest_midpoint_dist = Graph_Eval.evaluate_selection_farthest_midpoint(S, G, distance).second;
 				// System.out.println("Farthest_Midpoint: " + farthest_midpoint_dist);
 				long start;
 				long duration_1 = 0;
@@ -382,6 +401,12 @@ public class Main {
 		// G.get_nodes().get(4));
 
 		int k = 10000;
+
+		sel = GraphSolver.sequential_addition_farthest_midpoint(G, k, true);
+		result = Graph_Eval.dijkstra_gap_eval(sel, G);
+		Graph_Util.write_graph(G, "SA_fm_pajek.txt", sel);
+		System.out.println("Maximum distance (sequential addition farthest_midpoint): "
+				+ Graph_Eval.evaluate_selection(sel, G).second);
 
 		sel = Utility.random_selection(G.num_edges(), k);
 		result = Graph_Eval.dijkstra_gap_eval(sel, G);
@@ -456,13 +481,17 @@ public class Main {
 			csv += duration + "; ";
 
 			time = System.nanoTime();
-			PolyLineSolver.parametric_search(A, k);
-			duration = System.nanoTime() - time;
+			for (int i = 0; i < 5; i++) {
+				PolyLineSolver.parametric_search(A, k);
+			}
+			duration = (System.nanoTime() - time) / 5;
 			csv += duration + "; ";
 
 			time = System.nanoTime();
+			for (int i = 0; i < 5; i++) {
 			PolyLineSolver.parametric_search_binary_search(A, k);
-			duration = System.nanoTime() - time;
+			}
+			duration = (System.nanoTime() - time) / 5;
 			csv += duration + "; ";
 
 			time = System.nanoTime();
@@ -480,70 +509,67 @@ public class Main {
 		System.out.println("Starting the polyline quality test ...");
 		int size = 10000;
 		double range = 10.0;
-		double[] A;
 		System.out.println("Creating random array of double values -- size: " + size + ", value range: " + range);
 		String csv = "k, random, uniform, greedy, parametric, farthest midpoint, graph, 1-OPT\n";
 		for (int k = 250; k <= 10000; k += 250) {
 			csv += k + ", ";
 			System.out.println(k + "/" + 10000);
+
+			boolean[][] sel = new boolean[5][];
+			double[][] polylines = new double[5][];
 			// System.out.println(Arrays.toString(A));
 			double gap = 0.0;
-			/* 
-			 * for (int i = 0; i < 5; i++) {
-			
-				A = Utility.random_Array(size, range);
-				boolean[] sel = Utility.random_selection(size, k);
-				gap += Utility.max_gap(A, sel) / 5;
+
+			for (int i = 0; i < 5; i++) {
+				polylines[i] = Utility.random_Array(size, range);
+			}
+
+			for (int i = 0; i < 5; i++) {
+				sel[i] = Utility.random_selection(size, k);
+				gap += Utility.max_gap(polylines[i], sel[i]) / 5;
 			}
 			csv += gap + ", ";
 
 			gap = 0.0;
 			for (int i = 0; i < 5; i++) {
-				A = Utility.random_Array(size, range);
-				boolean[] sel = PolyLineSolver.uniform_selection_heuristic(A, k);
-				gap += Utility.max_gap(A, sel) / 5;
+				sel[i] = PolyLineSolver.uniform_selection_heuristic(polylines[i], k);
+				gap += Utility.max_gap(polylines[i], sel[i]) / 5;
 			}
 			csv += gap + ", ";
 
 			gap = 0.0;
 			for (int i = 0; i < 5; i++) {
-				A = Utility.random_Array(size, range);
-				boolean[] sel = PolyLineSolver.greedy_heuristic(A, k);
-				gap += Utility.max_gap(A, sel) / 5;
-			}
-			csv += gap + ", ";
-			
-			gap = 0.0;
-			for (int i = 0; i < 5; i++) {
-				A = Utility.random_Array(size, range);
-				boolean[] sel = PolyLineSolver.parametric_search_binary_search(A, k);
-				gap += Utility.max_gap(A, sel) / 5;
+				sel[i] = PolyLineSolver.greedy_heuristic(polylines[i], k);
+				gap += Utility.max_gap(polylines[i], sel[i]) / 5;
 			}
 			csv += gap + ", ";
 
 			gap = 0.0;
 			for (int i = 0; i < 5; i++) {
-				A = Utility.random_Array(size, range);
-				Graph G = new Graph(A);
-				boolean[] sel = GraphSolver.sequential_addition_farthest_midpoint(G, k, false);
-				gap += Utility.max_gap(A, sel) / 5;
-			}
-			csv += gap + ", ";	
-			*/
-			gap = 0.0;
-			boolean[][] sel = new boolean[5][];
-			double[][] Arrays = new double[5][]; 
-			for (int i = 0; i < 5; i++) {
-				Arrays[i] = Utility.random_Array(size, range);
-				sel[i] = PolyLineSolver.graph_heuristic(Arrays[i], k);
-				gap += Utility.max_gap(Arrays[i], sel[i]) / 5;
+				sel[i] = PolyLineSolver.parametric_search_binary_search(polylines[i], k);
+				gap += Utility.max_gap(polylines[i], sel[i]) / 5;
 			}
 			csv += gap + ", ";
-			
+
 			gap = 0.0;
 			for (int i = 0; i < 5; i++) {
-				boolean[] sel_1_opt = PolyLineSolver.one_opt(Arrays[i], sel[i]);
-				gap += Utility.max_gap(Arrays[i], sel_1_opt) / 5;
+				Graph G = new Graph(polylines[i]);
+				sel[i] = GraphSolver.sequential_addition_farthest_midpoint(G, k, false);
+				gap += Utility.max_gap(polylines[i], sel[i]) / 5;
+			}
+			csv += gap + ", ";
+
+			gap = 0.0;
+			for (int i = 0; i < 5; i++) {
+				sel[i] = PolyLineSolver.graph_heuristic(polylines[i], k);
+				gap += Utility.max_gap(polylines[i], sel[i]) / 5;
+			}
+			csv += gap + ", ";
+
+			gap = 0.0;
+			for (int i = 0; i < 5; i++) {
+				sel[i] = PolyLineSolver.one_opt(polylines[i], sel[i]);
+				gap += Utility.max_gap(polylines[i], sel[i]) / 5;
 			}
 			csv += gap + "\n";
 

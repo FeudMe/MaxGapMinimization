@@ -140,7 +140,7 @@ public abstract class TreeSolver {
 	public static boolean[] k_largest(Tree T, int k) {
 		boolean[] S = new boolean[T.edges.size()];
 		T.edges.sort((Edge e_1, Edge e_2) -> {
-			return (e_1.length > e_2.length) ? 1 : -1;
+			return (e_1.length > e_2.length) ? -1 : 1;
 		});
 		for (int i = 0; i < k; i++) {
 			S[T.edges.get(i).index] = true;

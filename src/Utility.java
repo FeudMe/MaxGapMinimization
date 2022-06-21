@@ -68,8 +68,8 @@ public abstract class Utility {
 	 * @param delta_k delta_k
 	 * @return list of possible gap lengths smaller than delta_k
 	 */
-	public static ArrayList<Double> generate_possible_gaps(double[] A, double delta_k) {
-		ArrayList<Double> gaps = new ArrayList<Double>();
+	public static LinkedList<Double> generate_possible_gaps(double[] A, double delta_k) {
+		LinkedList<Double> gaps = new LinkedList<Double>();
 		// create array of all possible gap lengths
 		for (int i = 0; i < A.length; i++) {
 			int j = i;
